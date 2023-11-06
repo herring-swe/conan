@@ -1,0 +1,4 @@
+sources:
+  "3.2.3":
+    url: "https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.3/wxWidgets-3.2.3.tar.bz2"
+    sha1: "694c4788aaf390983183a8648145eb883715c3d5"
