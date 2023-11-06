@@ -71,8 +71,10 @@ class wxwidgetsRecipe(ConanFile):
 
     # Optional metadata
     license = "wxWidgets"
-    author = "Åke Svedin <ake.svedin@gmail.com> and original creator at bincrafter"
-    url = "https://github.com/bincrafters/conan-wxwidgets"
+    # This recipe maintainer. Note this recipe is heavily modified from bincrafters:
+    # https://github.com/bincrafters/community
+    author = "Åke Svedin (ake.svedin@gmail.com)"
+    url = "https://github.com/herring-swe/conan"
     description = "wxWidgets is a C++ library that lets developers create applications for Windows, macOS, " \
                   "Linux and other platforms with a single code base."
     homepage = "https://www.wxwidgets.org"
