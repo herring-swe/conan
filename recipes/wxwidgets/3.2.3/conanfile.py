@@ -12,7 +12,7 @@ import json
 
 required_conan_version = ">=2.0"
 
-class ParseCMakeError(Exception):
+class ParseCMakeError(ConanException):
     pass
 
 def _CreateComp(name, target):
@@ -23,8 +23,7 @@ def _CreateComp(name, target):
         'libdirs': [],
         'src_implib': "",
         'src_libloc': "",
-        ## TODO
-        #'src_soname': "",
+        'src_soname': "",
         'defines': [],
         'includedirs': [],
         'requires': [],
@@ -48,22 +47,6 @@ def _CompStr(comp, os=''):
         str += "      frameworks: %s\n" %('; '.join(comp['frameworks']))
     return str
 
-def _append(list, value):
-    if value not in list:
-        list.append(value)
-
-class _SysDep(object):
-    __slots__ = ['desc', 'names', 'installed']
-
-    def __init__(self, desc):
-        self.desc = desc
-        self.names = []
-        self.installed = False
-
-#class DataHolder:
-#    def __init__(self):
-#        self.comps = {}
-
 class wxwidgetsRecipe(ConanFile):
     name = "wxwidgets"
     version = "3.2.3"
@@ -75,8 +58,9 @@ class wxwidgetsRecipe(ConanFile):
     # https://github.com/bincrafters/community
     author = "Åke Svedin (ake.svedin@gmail.com)"
     url = "https://github.com/herring-swe/conan"
-    description = "wxWidgets is a C++ library that lets developers create applications for Windows, macOS, " \
-                  "Linux and other platforms with a single code base."
+    description = "wxWidgets is a C++ library that lets developers create " \
+                  "applications for Windows, macOS, Linux and other " \
+                  "platforms with a single code base."
     homepage = "https://www.wxwidgets.org"
     topics = ("conan", "wxwidgets", "gui", "ui")
 
@@ -214,172 +198,56 @@ class wxwidgetsRecipe(ConanFile):
             self.options.rm_safe("glcanvas_egl")
 
     def system_requirements(self):
-        # The pitfall of finding proper package names for the current system
+        if self.settings.os != 'Linux':
+            #self.output.verbose("Skipping system package requirements on os: " + str(self.settings.os))
+            return
 
-        # Let's do the super duper simple "conan" way...
+        # Let's do the super duper simple "conan" way but collect all packages
+        # so at least all are tried at one shot
         # Only considered the following with their respective sources
-        apt = package_manager.Apt(self)     # Ubuntu 20.04
-        yum = package_manager.Yum(self)     # pkgs.org: RHEL 7 or CentOS 7
-        dnf = package_manager.Dnf(self)     # pkgs.org: RHEL 9 or Rocky 9
-        zyp = package_manager.Zypper(self)  # pkgs.org: openSuse 15
-        pac = package_manager.PacMan(self)  # pkgs.org: Arch
+        papt = [] # Ubuntu 20.04
+        pyum = [] # pkgs.org: RHEL 7 or CentOS 7
+        pdnf = [] # pkgs.org: RHEL 9 or Rocky 9
+        pzyp = [] # pkgs.org: openSuse 15
+        ppac = [] # pkgs.org: Arch
 
         if self.options.webview:
             # libcurl-dev is a virtual package, user must select which to install...
-            apt.install(['libsoup2.4-dev', 'libwebkit2gtk-4.0-dev']) # libwebkitgtk-3.0-dev too old
-            yum.install(['libsoup-devel', 'webkitgtk4-devel'])
-            dnf.install(['libsoup-devel', 'webkit2gtk3-devel'])
-            zyp.install(['libsoup2-devel', 'webkit2gtk3-soup2-devel'])
-            pac.install(['libsoup', 'webkit2gtk'])
+            papt.extend(['libsoup2.4-dev', 'libwebkit2gtk-4.0-dev']) # libwebkitgtk-3.0-dev too old
+            pyum.extend(['libsoup-devel', 'webkitgtk4-devel'])
+            pdnf.extend(['libsoup-devel', 'webkit2gtk3-devel'])
+            pzyp.extend(['libsoup2-devel', 'webkit2gtk3-soup2-devel'])
+            ppac.extend(['libsoup', 'webkit2gtk'])
         if self.options.secretstore:
-            apt.install(['libsecret-1-dev'])
-            yum.install(['libsecret-devel'])
-            dnf.install(['libsecret-devel'])
-            zyp.install(['libsecret-devel'])
-            pac.install(['libsecret'])
+            papt.extend(['libsecret-1-dev'])
+            pyum.extend(['libsecret-devel'])
+            pdnf.extend(['libsecret-devel'])
+            pzyp.extend(['libsecret-devel'])
+            ppac.extend(['libsecret'])
         if self.options.mediactrl:
-            apt.install(['libgstreamer0.10-dev', 'libgstreamer-plugins-base0.10-dev'])
-            yum.install(['gstreamer-devel'], ['gstreamer-plugins-base-devel'])
-            #dnf.install([''], [''])
-            #zyp.install([''], [''])
-            #pac.install(['gstreamer0.10'], ['gstreamer0.10-base-plugins']) # Chaotic repo... don't count on it
+            papt.extend(['libgstreamer0.10-dev', 'libgstreamer-plugins-base0.10-dev'])
+            pyum.extend(['gstreamer-devel'], ['gstreamer-plugins-base-devel'])
+            #pdnf.extend([''], [''])
+            #pzyp.extend([''], [''])
+            #ppac.extend(['gstreamer0.10'], ['gstreamer0.10-base-plugins']) # Chaotic repo... don't count on it
         if self.options.cairo:
-            apt.install(['libcairo2-dev'])
-            yum.install(['cairo-devel'])
-            dnf.install(['cairo-devel'])
-            zyp.install(['cairo-devel'])
-            pac.install(['cairo'])
+            papt.extend(['libcairo2-dev'])
+            pyum.extend(['cairo-devel'])
+            pdnf.extend(['cairo-devel'])
+            pzyp.extend(['cairo-devel'])
+            ppac.extend(['cairo'])
 
+        apt = package_manager.Apt(self)
+        yum = package_manager.Yum(self)
+        dnf = package_manager.Dnf(self)
+        zyp = package_manager.Zypper(self)
+        pac = package_manager.PacMan(self)
+        apt.install(papt)
+        yum.install(pyum)
+        dnf.install(pdnf)
+        zyp.install(pzyp)
+        pac.install(ppac)
         return
-
-#        # Below is our old code since we disagree with the simplicistic approach of conan (especially when a package fail...)
-
-#        if self.settings.os != 'Linux':
-#            self.output.verbose("Skipping system package requirements on os: " + str(self.settings.os))
-#            return
-
-#        pkgs = {}
-##        pkgs['x11'] = _SysDep('libx11-dev')
-##        pkgs['']
-##        if self.options.gtk == 'gtk2':
-##            pkgs['gtk2'] = _SysDep('libgtk2-dev')
-##        if self.options.gtk == 'gtk3':
-##            pkgs['gtk3'] = _SysDep('libgtk3-dev')
-#        if self.options.webview:
-#            pkgs['curl'] = _SysDep('libcurl-dev') # required by web session...
-#            pkgs['soup'] = _SysDep('libsoup-dev (>= 2.4)')
-#            pkgs['webkit'] = _SysDep('libwebkit2gtk-dev (>= 4.0) or libwebkitgtk-dev (>= 3.0)')
-#        if self.options.secretstore:
-#            pkgs['secretstore'] = _SysDep('libsecret-dev')
-#        if self.options.mediactrl:
-#            pkgs['gstreamer'] = _SysDep('libgstreamer-dev (>= 0.10)')
-#            pkgs['gstreamer-plugins-base'] = _SysDep('libgstreamer-plugins-base-dev (>= 0.10)')
-#        if self.options.cairo:
-#            # TODO: Check if cairo can be provided through conan instead
-#            #       Cairo _should_ also already be provided by libgtkX-dev
-#            pkgs['cairo'] = _SysDep('libcairo2-dev')
-
-#        import distro
-#        os_dist = distro.id()
-
-#        # Below is based on limited knowledge and access to systems
-#        if not os_dist:
-#            pass
-#        elif os_dist in ['debian', 'ubuntu']: # Debian-isch
-##            if 'x11' in pkgs:
-##                pkgs['x11'].names = ['libx11-dev']
-##            if 'gtk2' in pkgs:
-##                pkgs['gtk2'].names = ['libgtk2.0-dev']
-##            if 'gtk3' in pkgs:
-##                pkgs['gtk3'].names = ['libgtk-3-dev']
-#            # This is a virtual package... user must select which to install
-#            #if 'curl' in pkgs:
-#            #    pkgs['curl'].names = ['libcurl-dev']
-#            if 'soup' in pkgs:
-#                pkgs['soup'].names = ['libsoup2.4-dev']
-#            if 'webkit' in pkgs:
-#                pkgs['webkit'].names = ['libwebkit2gtk-4.0-dev', 'libwebkitgtk-3.0-dev'] # potentially add libwebkitgtk-3.0-dev ?
-#            if 'secretstore' in pkgs:
-#                pkgs['secretstore'].names = ['libsecret-1-dev']
-#            if 'gstreamer' in pkgs:
-#                pkgs['gstreamer'].names = ['libgstreamer0.10-dev']
-#            if 'gstreamer-plugins-base' in pkgs:
-#                pkgs['gstreamer-plugins-base'].names = ['libgstreamer-plugins-base0.10-dev']
-#            if 'cairo' in pkgs:
-#                pkgs['cairo'].names = ['libcairo2-dev']
-#        elif os_dist in ['rhel', 'fedora', 'rocky', 'centos']: # Redhat-isch
-#            pass
-#        elif os_dist in ['sles', 'opensuse']: # Sles-isch
-#            pass
-
-#        # Add all linux ones here. Who knows what the user configured to use...
-#        tools = [Apt(self), Dnf(self), Yum(self), Zypper(self), PacMan(self), Apk(self)]
-#        default_tool_name = tools[0].get_default_tool()
-#        user_tool_name = self.conf.get("tools.system.package_manager:tool", default=default_tool_name)
-#        tool = None
-#        for t in tools:
-#            if t.tool_name == user_tool_name:
-#                tool = t
-#                break
-
-#        no_cand = []
-#        failed = []
-#        errors = []
-
-##        self.output.debug("distro: " + os_dist)
-##        self.output.debug("default_tool_name: " + default_tool_name)
-##        self.output.debug("user_tool_name: " + user_tool_name)
-##        self.output.debug("tool: " + str(tool))
-
-#        for sysdep in pkgs.values():
-#            print(sysdep)
-#            if not tool or not sysdep.names:
-#                no_cand.append(sysdep.desc)
-#            elif len(sysdep.names) == 1:
-#                if not tool.check(sysdep.names):
-#                    sysdep.installed = True
-#                else:
-#                    try:
-#                        tool.install(sysdep.names)
-#                        sysdep.installed = True
-#                    except ConanException as e:
-#                        failed.append(sysdep.names[0])
-#                        errors.append(e)
-#            else:
-#                for name in sysdep.names:
-#                    if not tool.check(sysdep.names):
-#                        sysdep.installed = True
-#                        break
-#                if not sysdep.installed:
-#                    # Too lazy to find out why tool.install_substitutes doesn't work
-#                    for candidate in sysdep.names:
-#                        try:
-#                            tool.install([candidate])
-#                            sysdep.installed = True
-#                            break
-#                        except ConanException as e:
-#                            errors.append(e)
-#                    if not sysdep.installed:
-#                        failed.append(' or '.join(sysdep.names))
-
-#        if no_cand:
-#            msg = "Some required system libraries cannot be resolved for your system\n"
-#            msg += "Check manually that these are installed for proper build or full functionality of wx:\n"
-#            for p in no_cand:
-#                msg += " * " + p + "\n";
-#            self.output.warning(msg)
-
-#        if failed:
-#            if errors:
-#                for e in errors:
-#                    self.output.warning(str(e))
-
-#            msg = "Failed to install some system requirements. Check above for errors.\n"
-#            msg += "If possible check if you can find and install the following packages manually:\n"
-#            for f in failed:
-#                msg += " * " + f + "\n"
-
-#            raise ConanException(msg)
 
     def build_requirements(self):
         self.build_requires("ninja/[>=1.10.1]")
@@ -607,44 +475,9 @@ class wxwidgetsRecipe(ConanFile):
         if 'base' not in comps:
             raise ParseCMakeError('Could not parse base component')
 
-        # Will also save comps
+        # Will also save comps data to package
         self._adjust_package(comps)
-
         return
-
-        # If we'd use wx's cmake config files.. which we don't
-#        if is_msvc(self):
-#            for d in glob.glob(os.path.join(self.package_folder, 'lib', 'vc_*')):
-#                self.cpp_info.bindirs.append(d)
-#                self.cpp_info.libdirs.append(d)
-
-#        #if not self.options.shared:
-#        config_file = os.path.join(self.package_folder, 'lib', 'cmake', 'wxWidgets', 'wxWidgetsConfig.cmake')
-#        tmp_file = config_file + ".tmp"
-
-#        with open(tmp_file, 'w') as fout:
-#            print("## Modified by wxwidgets conan package to load dependencies ##", file=fout)
-#            if self.options.png != 'off':
-#                print("find_package(PNG CONFIG REQUIRED)", file=fout)
-#            if self.options.jpeg != 'off':
-#                print("find_package(JPEG CONFIG REQUIRED)", file=fout)
-#            if self.options.tiff != 'off':
-#                print("find_package(TIFF CONFIG REQUIRED)", file=fout)
-#            if self.options.zlib != 'off':
-#                print("find_package(ZLIB CONFIG REQUIRED)", file=fout)
-#            if self.options.expat != 'off':
-#                print("find_package(EXPAT MODULE REQUIRED)", file=fout)
-#            print("##############################################################", file=fout)
-
-#            with open(config_file, 'r') as fcfg:
-#                for line in fcfg:
-#                    print(line.rstrip(), file=fout)
-#        os.unlink(config_file)
-#        os.rename(tmp_file, config_file)
-
-#        for config_file in glob.glob(os.path.join(self.package_folder, 'lib', 'cmake', 'wxWidgets', 'vc_*', 'wxWidgetsTargets.cmake')):
-#            suffix_debug = 'd' if self.settings.build_type == 'Debug' else ''
-#            replace_in_file(self, config_file, r'\$<\$<CONFIG:Debug>:d>', suffix_debug, strict=False)
 
     def package_info(self):
         comps = self._load_package_info()
@@ -751,11 +584,10 @@ class wxwidgetsRecipe(ConanFile):
                     elif line.startswith('IMPORTED_IMPLIB'):
                         relpath = line.split(' ', 1)[1].strip('"').replace('${_IMPORT_PREFIX}/', '')
                         comp['src_implib'] = relpath
-                    ## TODO soname
-                    #elif line.startswith('IMPORTED_SONAME'):
-                    #    # Strip any leading @rpath/
-                    #    basename = os.path.basename(line.split(' ', 1)[1].strip('"'))
-                    #    comp['src_soname'] = basename
+                    elif line.startswith('IMPORTED_SONAME'):
+                        # Strip any leading @rpath/
+                        basename = os.path.basename(line.split(' ', 1)[1].strip('"'))
+                        comp['src_soname'] = basename
                     continue
 
                 m = re_prop.match(line)
