@@ -129,7 +129,7 @@ class wxwidgetsRecipe(ConanFile):
         "gtk": ["gtk2", "gtk3"],
         "zlib": ["off", "zlib"],
         "png": ["off", "libpng"],
-        "jpeg": ["off", "libjpeg"],  # , "libjpeg-turbo", "mozjpeg"],
+        "jpeg": ["off", "libjpeg", "libjpeg-turbo", "mozjpeg"],
         "tiff": ["off", "libtiff"],
         "nanosvg": ["off", "nanosvg"],
         "expat": ["off", "expat"],
@@ -220,6 +220,11 @@ class wxwidgetsRecipe(ConanFile):
         # Let's do the super duper simple "conan" way but collect all packages
         # so at least all are tried at one shot
         # Only considered the following with their respective sources
+        
+        # Conan is weird anyway since wtf is this? (from the docs):
+        # Yum for Linux with distribution names: pidora, scientific, xenserver, amazon, oracle, amzn, almalinux or rocky
+        # Dnf for Linux with distribution names: fedora, rhel, centos, mageia
+
         papt = []  # Ubuntu 20.04
         pyum = []  # pkgs.org: RHEL 7 or CentOS 7
         pdnf = []  # pkgs.org: RHEL 9 or Rocky 9
@@ -244,8 +249,8 @@ class wxwidgetsRecipe(ConanFile):
         if self.options.mediactrl:
             papt.extend(["libgstreamer0.10-dev", "libgstreamer-plugins-base0.10-dev"])
             pyum.extend(["gstreamer-devel"], ["gstreamer-plugins-base-devel"])
-            # pdnf.extend([''], [''])
-            # pzyp.extend([''], [''])
+            # pdnf.extend(['gstreamer1-devel'], ['gstreamer1-plugins-base-devel'])
+            # pzyp.extend([''], [''])  # Fixme
             # ppac.extend(['gstreamer0.10'], ['gstreamer0.10-base-plugins']) # Chaotic repo... don't count on it
         if self.options.cairo:
             papt.extend(["libcairo2-dev"])
