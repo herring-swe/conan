@@ -1,12 +1,18 @@
 import os
 
 from conan import ConanFile
-from conan.tools.cmake import CMake, cmake_layout
 from conan.tools.build import can_run
+from conan.tools.cmake import CMake, cmake_layout
+from conan.tools.env import VirtualRunEnv
+
 
 class wxwidgetsTestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeDeps", "CMakeToolchain"
+
+    def generate(self):
+        ms = VirtualRunEnv(self)
+        ms.generate()
 
     def requirements(self):
         self.requires(self.tested_reference_str)
@@ -22,8 +28,4 @@ class wxwidgetsTestConan(ConanFile):
     def test(self):
         if can_run(self):
             cmd = os.path.join(self.cpp.build.bindir, "test_package")
-            if self.settings.os == "Windows":
-                script = os.path.join(self.source_folder, "test.bat")
-                script += f' "{cmd}"'
-                cmd = script
             self.run(cmd, env="conanrun")
