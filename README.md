@@ -23,7 +23,7 @@ Recipes:
     * There's a version on conancenter now, which I think have some flaws
       * No components
       * No ability to turn off libtiff and other image support libraries
-      * Some other flags
+      * Some other options like glcanvas_egl
       * No GTK 3 (waiting for default to change for gtk/system)
       * Oh and I saw plan to switch to non-system version of GTK when it's available... I will _always_ target the system's GTK.
     * Be aware that this recipe do require a lot of system packages (too many via xorg/system)
